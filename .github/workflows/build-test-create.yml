@@ -1,0 +1,113 @@
+name: Build Test And Create
+on: 
+  workflow_call:
+      secrets:
+          token:
+              required: false
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+jobs:
+    build_and_test:
+      runs-on: ubuntu-latest
+      strategy:
+        fail-fast: false
+        matrix:
+          node-version: [14.x, 16.x, 18.x] 
+      steps:
+        - uses: actions/checkout@v3  # Check out your project code
+    
+        - name: Use Node.js ${{ matrix.node-version }}  # Setup Node (with matrix support)
+          uses: actions/setup-node@v3
+          with:
+            node-version: ${{ matrix.node-version }}
+        - name: Install dependencies
+          run: npm ci
+        - name: Build Project 
+          run: npm run build
+        - name: Check for docker-compose.yml file
+          uses: andstor/file-existence-action@v2
+          id: check_files
+          with:
+            files: "docker-compose.yml"
+        - name: Start test backend
+          if: steps.check_files.outputs.files_exists == 'true'
+          run: |
+            docker compose -f docker-compose.yml up -d
+            sleep 5
+        - name: Test Project
+          run: npm test 
+        - name: Shoutdown test backend
+          if: steps.check_files.outputs.files_exists == 'true' &&  (success() || failure())
+          run: |
+            docker compose -f docker-compose.yml logs
+            docker compose -f docker-compose.yml down -v
+    build-docker-images:
+      name: Build and Publish Docker Image
+      runs-on: ubuntu-latest
+      needs: build_and_test
+      outputs:
+        IMAGE_TO_DEPLOY: ${{ steps.meta.outputs.tags }}
+      steps:
+        - name: Checkout source code
+          uses: actions/checkout@v3
+          with:
+            fetch-depth: 0
+        - name: Install GitVersion
+          uses: gittools/actions/gitversion/setup@v0
+          with:
+            versionSpec: '5.x'
+        - name: Determine Version
+          id: gitversion
+          uses: gittools/actions/gitversion/execute@v0
+          with:
+            useConfigFile: true
+        - name: Manage Version
+          run: |
+            echo "Modify build.gradle for with version number \"$GitVersion_Major.$GitVersion_Minor.$GitVersion_Patch\""
+            sed -i "s#^.*version.*=.*#version = '$GitVersion_Major.$GitVersion_Minor.$GitVersion_Patch'#" build.gradle
+            cat build.gradle
+        - name: Set up Docker Buildx
+          uses: docker/setup-buildx-action@v2
+        - name: Log in to the Container registry
+          uses: docker/login-action@v2
+          with:
+            registry: ${{ env.REGISTRY }}
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+        - name: Docker Metadata
+          id: meta
+          uses: docker/metadata-action@v4
+          with:
+            # list of Docker images to use as base name for tags
+            images: ${{env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            # generate Docker tags based on the following events/attributes
+            tags: |
+              type=sha
+            labels: |
+              maintainer=bisegni@slac.stanford.edu
+        - name: Build and push Docker image
+          uses: docker/build-push-action@v4
+          id: build_and_push
+          with:
+            context: .
+            file: ./Dockerfile
+            platforms: |
+              linux/amd64
+              linux/arm64/v8
+            provenance: false
+            push: true
+            tags: ${{ steps.meta.outputs.tags }}
+            labels: ${{ steps.meta.outputs.labels }}
+    deploy:
+        name: Start Deployment
+        runs-on: ubuntu-latest
+        needs: build-docker-images
+        steps:
+          - run: |
+                gh workflow --repo eed-web-application/elog-plus-deployment run Deployment -f deployment_image="${{needs.build-docker-images.outputs.IMAGE_TO_DEPLOY}} "
+            env:
+                GITHUB_TOKEN: ${{ secrets.TRIGGER_WORKFLOW_SECRET }}
