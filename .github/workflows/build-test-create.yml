@@ -16,7 +16,7 @@ jobs:
       strategy:
         fail-fast: false
         matrix:
-          node-version: [14.x, 16.x, 18.x] 
+          node-version: [21.x] 
       steps:
         - uses: actions/checkout@v3  # Check out your project code
     
@@ -108,6 +108,6 @@ jobs:
         needs: build-docker-images
         steps:
           - run: |
-                gh workflow --repo eed-web-application/elog-plus-deployment run Deployment -f deployment_image="${{needs.build-docker-images.outputs.IMAGE_TO_DEPLOY}} "
+                gh workflow --repo eed-web-application/nodejs-test-abckend-deployment run Deployment -f deployment_image="${{needs.build-docker-images.outputs.IMAGE_TO_DEPLOY}} "
             env:
                 GITHUB_TOKEN: ${{ secrets.TRIGGER_WORKFLOW_SECRET }}
