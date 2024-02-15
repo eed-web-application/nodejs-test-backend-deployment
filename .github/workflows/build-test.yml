@@ -31,10 +31,10 @@ jobs:
                 ls test/**/*.test.js >/dev/null 2>&1
                 ); then
                 echo "Tests found, setting run_tests to true."
-                echo "::set-output name=run_tests::true"
+                echo "RUN_TESTS=true" >> $GITHUB_ENV
             else
                 echo "No tests found, setting run_tests to false."
-                echo "::set-output name=run_tests::false"
+                echo "RUN_TESTS=false" >> $GITHUB_ENV
             fi
       
         - name: Check for docker-compose.yml file
@@ -48,9 +48,11 @@ jobs:
           run: |
             docker compose -f docker-compose.yml up -d
             sleep 5
+
         - name: Test Project
-          if: steps.check-tests.outputs.run_tests == 'true'
+          if: env.RUN_TESTS == 'true'
           run: npm test 
+
         - name: Shoutdown test backend
           if: steps.check_files.outputs.files_exists == 'true' &&  (success() || failure())
           run: |

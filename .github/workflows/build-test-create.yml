@@ -15,32 +15,51 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - uses: actions/checkout@v3  # Check out your project code
-    
         - name: Use Node.js # Setup Node (with matrix support)
           uses: actions/setup-node@v3
           with:
             node-version: 21.x
+
         - name: Install dependencies
           run: npm ci
-        - name: Build Project 
-          run: npm run build
+
+        - name: Check for Test Files
+          id: check-tests
+          run: |
+            if [ -d test ] && (
+                ls test/*.test.js >/dev/null 2>&1 || 
+                ls test/**/*.test.js >/dev/null 2>&1
+                ); then
+                echo "Tests found, setting run_tests to true."
+                echo "::set-output name=run_tests::true"
+            else
+                echo "No tests found, setting run_tests to false."
+                echo "::set-output name=run_tests::false"
+            fi
+        
+         
         - name: Check for docker-compose.yml file
           uses: andstor/file-existence-action@v2
           id: check_files
           with:
             files: "docker-compose.yml"
+
         - name: Start test backend
           if: steps.check_files.outputs.files_exists == 'true'
           run: |
             docker compose -f docker-compose.yml up -d
             sleep 5
+
         - name: Test Project
+          if: steps.check-tests.outputs.run_tests == 'true'
           run: npm test 
+
         - name: Shoutdown test backend
           if: steps.check_files.outputs.files_exists == 'true' &&  (success() || failure())
           run: |
             docker compose -f docker-compose.yml logs
             docker compose -f docker-compose.yml down -v
+            
     build-docker-images:
       name: Build and Publish Docker Image
       runs-on: ubuntu-latest
