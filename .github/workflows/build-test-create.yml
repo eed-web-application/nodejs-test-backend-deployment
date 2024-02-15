@@ -121,6 +121,6 @@ jobs:
         needs: build-docker-images
         steps:
           - run: |
-                gh workflow --repo eed-web-application/nodejs-test-abckend-deployment run Deployment -f deployment_image="${{needs.build-docker-images.outputs.IMAGE_TO_DEPLOY}} "
+                gh workflow --repo eed-web-application/nodejs-test-backend-deployment run Deployment -f deployment_image="${{needs.build-docker-images.outputs.IMAGE_TO_DEPLOY}} "
             env:
                 GITHUB_TOKEN: ${{ secrets.TRIGGER_WORKFLOW_SECRET }}
