@@ -23,6 +23,7 @@ jobs:
             - run: |
                 echo "Configure deploy with image $DEPLOY_IMAGE"
                 tools/set-image-name.sh $DEPLOY_IMAGE test/deployment.yaml
+                
                 cat test/deployment.yaml
             - name: Commit and Push Changes
               id: commit-and-push
