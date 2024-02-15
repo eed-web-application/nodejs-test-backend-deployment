@@ -78,7 +78,7 @@ jobs:
           id: gitversion
           uses: gittools/actions/gitversion/execute@v0
           with:
-            useConfigFile: true
+            useConfigFile: false
         - name: Manage Version
           run: |
             echo "Writing version \"$GitVersion_Major.$GitVersion_Minor.$GitVersion_Patch\" to src/version.js"
