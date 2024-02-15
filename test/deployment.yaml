@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-test-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nodejs-test-backend
+  template:
+    metadata:
+      labels:
+        app: nodejs-test-backend
+      annotations:
+        # prometheus.io/scrape: 'true'
+        # prometheus.io.scheme: 'http'
+        # prometheus.io/path: '/actuator/prometheus'
+        # prometheus.io/port: '8080'
+    spec:
+      containers:
+      - name: nodejs-test-backend
+        imagePullPolicy: Always
+        image: image-name
+        envFrom:
+        - configMapRef:
+            name: env-config-map
+        resources:
+          limits:
+            memory: 512Mi
+            cpu: "250m"
+        ports:
+        - containerPort: 3000
+      imagePullSecrets:
+      - name: gh-secret
