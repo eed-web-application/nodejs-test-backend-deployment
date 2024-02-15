@@ -81,9 +81,8 @@ jobs:
             useConfigFile: true
         - name: Manage Version
           run: |
-            echo "Modify build.gradle for with version number \"$GitVersion_Major.$GitVersion_Minor.$GitVersion_Patch\""
-            sed -i "s#^.*version.*=.*#version = '$GitVersion_Major.$GitVersion_Minor.$GitVersion_Patch'#" build.gradle
-            cat build.gradle
+            echo "Writing version \"$GitVersion_Major.$GitVersion_Minor.$GitVersion_Patch\" to src/version.js"
+            echo "export const VERSION = '$GitVersion_Major.$GitVersion_Minor.$GitVersion_Patch';" > src/version.js
         - name: Set up Docker Buildx
           uses: docker/setup-buildx-action@v2
         - name: Log in to the Container registry
