@@ -20,7 +20,7 @@ spec:
       containers:
       - name: nodejs-test-backend
         imagePullPolicy: Always
-        image: image-name
+        image: ghcr.io/eed-web-application/nodejs-test-backend:sha-765e8e7
         envFrom:
         - configMapRef:
             name: env-config-map
